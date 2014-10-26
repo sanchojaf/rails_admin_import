@@ -72,7 +72,7 @@ module RailsAdminImport
           if file_check.readlines.size > RailsAdminImport.config.line_item_limit
             return results = { :success => [], :error => ["Please limit upload file to #{RailsAdminImport.config.line_item_limit} line items."] }
           end
-  
+          
           map = {}
    
           file = CSV.new(clean)
@@ -89,7 +89,7 @@ module RailsAdminImport
   
           if update && !map.has_key?(params[:update_lookup].to_sym)
             return results = { :success => [], :error => ["Your file must contain a column for the 'Update lookup field' you selected."] }
-          end 
+          end
     
           results = { :success => [], :error => [] }
     
@@ -97,10 +97,17 @@ module RailsAdminImport
           self.belongs_to_fields.flatten.each do |field|
             associated_map[field] = field.to_s.classify.constantize.all.inject({}) { |hash, c| hash[c.send(params[field]).to_s] = c.id; hash }
           end
+          
           self.many_fields.flatten.each do |field|
-            associated_map[field] = field.to_s.classify.constantize.all.inject({}) { |hash, c| hash[c.send(params[field]).to_s] = c; hash }
+            if field == :comment
+              klass = "Blog::#{field.to_s.classify}"
+            else
+              klass = "#{field.to_s.classify}".constantize
+            end
+            klass = klass.constantize
+            associated_map[field] = klass.all.inject({}) { |hash, c| hash[c.send(params[field]).to_s] = c; hash}
           end
-   
+          
           label_method = RailsAdminImport.config(self).label
   
           file.each do |row|
